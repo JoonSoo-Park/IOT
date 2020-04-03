@@ -74,6 +74,22 @@ void requestReadhdrs(rio_t *rp, int *length)
   return;
 }
 
+// parse argument from uri
+// input: uri -> /xxx/xxx?aaa&aaa
+// uri -> /xxx/xxx
+// cgiargs -> aaa&aaa
+int parseArgument(char* uri, char* cgiargs)
+{
+    for (int i = 0; i < strlen(uri); ++i) {
+      if (uri[i] == '?') {
+        uri[i] = '\0';
+        strcpy(cgiargs, &uri[i + 1]);
+        return 1;
+      }
+    }
+    return 0;
+}
+
 //
 // Return STATIC if static, DYNAMIC if dynamic content
 // Input: uri
@@ -87,7 +103,7 @@ int parseURI(char *uri, char *filename, char *cgiargs)
     strcpy(cgiargs, "");
     sprintf(filename, ".%s", uri);
     if (uri[strlen(uri)-1] == '/') {
-      strcat(filename, "index.html");
+      strcat(filename, "index.html"); /* default ?? */ 
     }
     return STATIC;
   } else {
@@ -96,14 +112,37 @@ int parseURI(char *uri, char *filename, char *cgiargs)
        if uri is "/output.cgi?100&TEST" then filename is 
        "./output.cgi" and cgiargs is "100&TEST" (? is not copied)
     */
-    // ..
-    // implement parse for dynamic URI
-    // ..
+    parseArgument(uri, cgiargs);
 
-    // following codes are dummy which should be deleted later
-    sprintf(filename, "./%s", uri);
+    sprintf(filename, ".%s", uri);
     return DYNAMIC;
   }
+}
+
+int parseCgiargs(const char* cgiargs, char** envp)
+{
+  static const char* delim = "&";
+  int position = 0;
+  char* token;
+  char* line;
+
+  line = malloc(strlen(cgiargs) * sizeof(char));
+  strcpy(line, cgiargs);
+
+  token = strtok(line, delim);
+  if (!token)
+    return -1;
+  while (token != NULL) {
+    envp[position++] = token;
+
+    if (position > MAXBUF)
+      return 0;
+    
+    token = strtok(NULL, delim);
+  }
+
+  envp[position] = NULL;
+  return 1;
 }
 
 //
@@ -123,25 +162,44 @@ void requestGetFiletype(char *filename, char *filetype)
 
 void requestServeDynamic(rio_t *rio, int fd, char *filename, char *cgiargs, int bodyLength, double arrivalTime)
 {
+  pid_t pid;
+  char* argv[1] = {NULL};
+  char* envp[MAXBUF];
+
   //
   // Followings are dummy. After they should be replaced with dynamic
   // request implementation.
   //
-  char buf[MAXLINE];
-  char astr[MAXLINE] = "Current version does not support CGI program.";
+  // char buf[MAXLINE];
+  // char astr[MAXLINE] = "Current version does not support CGI program.";
 
-  if (bodyLength > 0){
+  /* what if body length > MAXLINE ??? */
+  if (bodyLength > 0){ /* read body */
     Rio_readlineb(rio, cgiargs, bodyLength+1);
     printf("%s\n", cgiargs);
   }
   
+  /*
   sprintf(buf, "HTTP/1.0 200 OK\r\n");
   sprintf(buf, "%sServer: My Web Server\r\n", buf);
-  sprintf(buf, "%sContent-Length: %d\r\n", buf, strlen(astr));
+  sprintf(buf, "%sContent-Length: %ld\r\n", buf, strlen(astr));
   sprintf(buf, "%sContent-Type: text/plain\r\n", buf);
   sprintf(buf, "%sStat-req-arrival: %lf\r\n\r\n", buf, arrivalTime);
   sprintf(buf, "%s%s\r\n", buf, astr);
   Rio_writen(fd, buf, strlen(buf));
+  */
+
+  pid = Fork();
+  if (pid == 0) /* child process */
+  {
+    parseCgiargs(cgiargs, envp);
+    Dup2(fd, STDOUT_FILENO);
+    Execve(filename, argv, envp);
+  }
+  else /* parent process */
+  {
+    wait(NULL);
+  }
 }
 
 
@@ -189,11 +247,11 @@ void requestHandle(int connfd, double arrivalTime)
   int bodyLength;
 
   Rio_readinitb(&rio, connfd);
-  Rio_readlineb(&rio, buf, MAXLINE);
-  sscanf(buf, "%s %s %s", method, uri, version);
+  Rio_readlineb(&rio, buf, MAXLINE); /* read request line */
+  sscanf(buf, "%s %s %s", method, uri, version); 
   printf("%s %s %s\n", method, uri, version);
   
-  requestReadhdrs(&rio, &bodyLength);
+  requestReadhdrs(&rio, &bodyLength); /* read body length */
   reqType = parseURI(uri, filename, cgiargs);
   if ((strcasecmp(method, "GET")!=0)&&(strcasecmp(method,"POST")!=0)){
     requestError(connfd, method, "501", "Not Implemented",

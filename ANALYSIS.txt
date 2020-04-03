@@ -1,0 +1,58 @@
+********************************* stems.h **********************************
+
+DEF_MODE -> 사용자, 그룹, others 모두 일기, 쓰기 가능
+DEF_UMASK -> 그룹, others 쓰기 가능
+
+RIO_BUFSIZE = 8192
+
+# rio_t 구조체
+rio_fd :                현재 버퍼의 내부 디스크립터
+rio_cnt :               현재 내부 버퍼의 읽지 않은 바이트 수
+*rio_bufptr :           내부 버퍼에서 읽지 않은 다음 바이트 
+rio_buf[RIO_BUFSIZE] :  내부 버퍼
+
+# extern char **environ
+이것이 환경 변수인데,,, '이름 = 값' 형태로 들어있다.
+environ[x] 에 이름 = 변수 형태로.
+
+# unix_error()
+fprintf(stderr, "%s : %s\n", msg, strerror(errno));
+여기서 strerror(errno)는 errno를 설명하는 에러 문자열을 반환하는 함수다.
+여기서 errno는 가장 최근에 발생한 에러 번호를 저장하게 된다.
+그래서 strerror(errno)를 하면 가장 최근 발생한 상태를 확인할 수 있다.
+
+# wait(int* status)
+on success, returns the process ID of the terminated child
+on error, -1 is returned
+
+# gethostname(char *name, size_t len)
+name : buffer to get name
+len : buffer size
+
+on success, return 0
+on fail, returns -1
+
+# setenv(const char* envname, const char* enval, int overwrite)
+putenv()처럼 환경변수 값을 수정하거나 추가한다.
+이 변경된 설정은 putenv()와 마찬가지로 프로그램 내에서만 유효하며
+overwrite 설정을 통해 이미 존재하는 환경변수에 대해 어떻게 할지 결정할 수 있다.
+overwrite가 1  인 경우에는 기존에 환경변수가 존재하면 enval로 변경
+0 인 경우 변경하지 않는다.
+
+on success, returns 0
+on fail, returns -1
+
+
+********************************** clientGet.c *********************************
+hostname과 webaddr이 있어 둘다 8192 바이트
+port 번호호
+
+1. getargs_cg(hostname, &port, webaddr);
+
+void getargs_cg(char hostname[], int *port, char webaddr[]);
+1. config-cg.txt를 읽어서 fd 얻고
+2. fscanf()로 읽는다.
+
+2. usertask()
+
+void userTask(char hostname[], int port, char webaddr[]);

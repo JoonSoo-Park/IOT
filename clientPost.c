@@ -28,7 +28,7 @@ void clientSend(int fd, char *filename, char *body)
   sprintf(buf, "POST %s HTTP/1.1\n", filename);
   sprintf(buf, "%sHost: %s\n", buf, hostname);
   sprintf(buf, "%sContent-Type: text/plain; charset=utf-8\n", buf);
-  sprintf(buf, "%sContent-Length: %d\n\r\n", buf, strlen(body));
+  sprintf(buf, "%sContent-Length: %ld\n\r\n", buf, strlen(body));
   sprintf(buf, "%s%s\n", buf, body);
   Rio_writen(fd, buf, strlen(buf));
 }

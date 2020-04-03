@@ -38,7 +38,7 @@ void htmlReturn(void)
   sprintf(content, "%s</body>\r\n</html>\r\n", content);
   
   /* Generate the HTTP response */
-  printf("Content-Length: %d\r\n", strlen(content));
+  printf("Content-Length: %ld\r\n", strlen(content));
   printf("Content-Type: text/html\r\n\r\n");
   printf("%s", content);
   fflush(stdout);
@@ -59,7 +59,7 @@ void textReturn(void)
   }
   
   /* Generate the HTTP response */
-  printf("Content-Length: %d\n", strlen(content));
+  printf("Content-Length: %ld\n", strlen(content));
   printf("Content-Type: text/plain\r\n\r\n");
   printf("%s", content);
   fflush(stdout);
