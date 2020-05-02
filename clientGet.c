@@ -84,7 +84,7 @@ void getargs_cg(char hostname[], int *port, char webaddr[])
 {
   FILE *fp;
 
-  fp = fopen("config-cg.txt", "r");
+  fp = fopen("config-cg2.txt", "r");
   if (fp == NULL)
     unix_error("config-cg.txt file does not open.");
 

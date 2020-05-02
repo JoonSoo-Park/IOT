@@ -443,6 +443,15 @@ ssize_t Rio_readn(int fd, void *ptr, size_t nbytes)
     return n;
 }
 
+ssize_t Rio_read(rio_t *rp, char *usrbuf, size_t nbytes)
+{
+    ssize_t n;
+
+    if ((n = rio_read(rp, usrbuf, nbytes)) < 0)
+        unix_error("Rio_read error");
+    return n;
+}
+
 void Rio_writen(int fd, void *usrbuf, size_t n) 
 {
     if (rio_writen(fd, usrbuf, n) != n)

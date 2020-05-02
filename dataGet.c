@@ -21,6 +21,8 @@ void htmlReturn(void)
   char content[MAXLINE];
   char *buf;
   char *ptr;
+  // char *connfd;
+  // int fd;
 
   /* Make the response body */
   sprintf(content, "%s<html>\r\n<head>\r\n", content);
@@ -36,12 +38,18 @@ void htmlReturn(void)
     ptr = strsep(&buf, "&");
   }
   sprintf(content, "%s</body>\r\n</html>\r\n", content);
-  
+
   /* Generate the HTTP response */
   printf("Content-Length: %ld\r\n", strlen(content));
   printf("Content-Type: text/html\r\n\r\n");
   printf("%s", content);
   fflush(stdout);
+
+  /*
+  connfd = getenv("CONNFD");
+  fd = atoi(connfd);
+  Rio_writen(fd, content, strlen(content));
+  */
 }
 
 void textReturn(void)

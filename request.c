@@ -121,7 +121,7 @@ int parseURI(char *uri, char *filename, char *cgiargs)
 
 int parseCgiargs(const char* cgiargs, char** envp)
 {
-  static const char* delim = "&";
+  const char* const delim = "&";
   int position = 0;
   char* token;
   char* line;
@@ -160,41 +160,43 @@ void requestGetFiletype(char *filename, char *filetype)
     strcpy(filetype, "test/plain");
 }
 
-void requestServeDynamic(rio_t *rio, int fd, char *filename, char *cgiargs, int bodyLength, double arrivalTime)
+void requestServeDynamic(rio_t *rio, int fd, char *filename, char *method, char *cgiargs, int bodyLength, double arrivalTime)
 {
+  const int BL = 1e5;
   pid_t pid;
   char* argv[1] = {NULL};
   char* envp[MAXBUF];
-
-  //
-  // Followings are dummy. After they should be replaced with dynamic
-  // request implementation.
-  //
-  // char buf[MAXLINE];
-  // char astr[MAXLINE] = "Current version does not support CGI program.";
-
-  /* what if body length > MAXLINE ??? */
-  if (bodyLength > 0){ /* read body */
-    Rio_readlineb(rio, cgiargs, bodyLength+1);
-    printf("%s\n", cgiargs);
-  }
-  
-  /*
-  sprintf(buf, "HTTP/1.0 200 OK\r\n");
-  sprintf(buf, "%sServer: My Web Server\r\n", buf);
-  sprintf(buf, "%sContent-Length: %ld\r\n", buf, strlen(astr));
-  sprintf(buf, "%sContent-Type: text/plain\r\n", buf);
-  sprintf(buf, "%sStat-req-arrival: %lf\r\n\r\n", buf, arrivalTime);
-  sprintf(buf, "%s%s\r\n", buf, astr);
-  Rio_writen(fd, buf, strlen(buf));
-  */
+  char body_length[BL];
+  char rest_contents[MAXLINE];
+  char CONNFD[10];
 
   pid = Fork();
   if (pid == 0) /* child process */
   {
+    Rio_readrestb(rio, rest_contents);
+    printf("%s", rest_contents);
+
     parseCgiargs(cgiargs, envp);
+
+    Setenv("REQUEST_METHOD", method, 1);
+    Setenv("REST_CONTENTS", rest_contents, 1);
+
+    sprintf(CONNFD, "%d", fd);
+    Setenv("CONNFD", CONNFD, 1);
+
     Dup2(fd, STDOUT_FILENO);
-    Execve(filename, argv, envp);
+
+    if (strcmp(method, "GET") == 0) { // if method is GET
+      Setenv("QUERY_STRING", cgiargs, 1);
+    }
+    else {
+      sprintf(body_length, "%d", bodyLength);
+      Setenv("CONTENT_LENGTH", body_length, 1);
+
+      Dup2(fd, STDIN_FILENO);
+    }
+
+    Execve(filename, argv, environ);
   }
   else /* parent process */
   {
@@ -276,7 +278,7 @@ void requestHandle(int connfd, double arrivalTime)
       requestError(connfd, filename, "403", "Forbidden", "My Server could not run this CGI program");
       return;
     }
-    requestServeDynamic(&rio, connfd, filename, cgiargs, bodyLength, arrivalTime);
+    requestServeDynamic(&rio, connfd, filename, method, cgiargs, bodyLength, arrivalTime);
   }
 
 }
