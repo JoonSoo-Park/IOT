@@ -160,50 +160,37 @@ void requestGetFiletype(char *filename, char *filetype)
     strcpy(filetype, "test/plain");
 }
 
-void requestServeDynamic(rio_t *rio, int fd, char *filename, char *cgiargs, int bodyLength, double arrivalTime)
+void requestServeDynamic(rio_t *rio, int fd, char *filename, char *cgiargs, int bodyLength, double arrivalTime, char *method)
 {
-  pid_t pid;
-  char* argv[1] = {NULL};
-  char* envp[MAXBUF];
+	pid_t pid;
+	char BodyLength[255];
+	char *argv[] = { NULL };
 
-  //
-  // Followings are dummy. After they should be replaced with dynamic
-  // request implementation.
-  //
-  // char buf[MAXLINE];
-  // char astr[MAXLINE] = "Current version does not support CGI program.";
+	Setenv("REQUEST_METHOD", method, 1);
+	if (strcmp(method, "GET") == 0) 
+		Setenv("QUERY_STRING", cgiargs, 1);
+	
+	if (strcmp(method, "POST") == 0) {
+		sprintf(BodyLength, "%d", bodyLength);
+		Setenv("CONTENT_LENGTH", BodyLength, 1);
+	}
 
-  /* what if body length > MAXLINE ??? */
-  if (bodyLength > 0){ /* read body */
-    Rio_readlineb(rio, cgiargs, bodyLength+1);
-    printf("%s\n", cgiargs);
-  }
-  
-  /*
-  sprintf(buf, "HTTP/1.0 200 OK\r\n");
-  sprintf(buf, "%sServer: My Web Server\r\n", buf);
-  sprintf(buf, "%sContent-Length: %ld\r\n", buf, strlen(astr));
-  sprintf(buf, "%sContent-Type: text/plain\r\n", buf);
-  sprintf(buf, "%sStat-req-arrival: %lf\r\n\r\n", buf, arrivalTime);
-  sprintf(buf, "%s%s\r\n", buf, astr);
-  Rio_writen(fd, buf, strlen(buf));
-  */
-
-  pid = Fork();
-  if (pid == 0) /* child process */
-  {
-    parseCgiargs(cgiargs, envp);
-    Dup2(fd, STDOUT_FILENO);
-    Execve(filename, argv, envp);
-  }
-  else /* parent process */
-  {
-    wait(NULL);
-  }
+	pid = Fork();
+	if (pid == 0) {
+		Dup2(fd, STDOUT_FILENO);
+		if (strcmp(method, "POST") == 0) 
+			Dup2(fd, STDIN_FILENO);
+		
+		Execve(filename, argv, environ);
+	}
+	else 
+	{
+		wait(NULL);
+	}
 }
 
 
-void requestServeStatic(int fd, char *filename, int filesize, double arrivalTime)
+void requestServeStatic(int fd, char *filename, int filesize, double arrivalTime, char *method)
 {
   int srcfd;
   char *srcp, filetype[MAXLINE], buf[MAXBUF];
@@ -270,13 +257,13 @@ void requestHandle(int connfd, double arrivalTime)
       requestError(connfd, filename, "403", "Forbidden", "My Server could not read this file");
       return;
     }
-    requestServeStatic(connfd, filename, sbuf.st_size, arrivalTime);
+    requestServeStatic(connfd, filename, sbuf.st_size, arrivalTime, method);
   } else {
     if (!(S_ISREG(sbuf.st_mode)) || !(S_IXUSR & sbuf.st_mode)) {
       requestError(connfd, filename, "403", "Forbidden", "My Server could not run this CGI program");
       return;
     }
-    requestServeDynamic(&rio, connfd, filename, cgiargs, bodyLength, arrivalTime);
+    requestServeDynamic(&rio, connfd, filename, cgiargs, bodyLength, arrivalTime, method);
   }
 
 }
