@@ -160,52 +160,37 @@ void requestGetFiletype(char *filename, char *filetype)
     strcpy(filetype, "test/plain");
 }
 
-void requestServeDynamic(rio_t *rio, int fd, char *filename, char *method, char *cgiargs, int bodyLength, double arrivalTime)
+void requestServeDynamic(rio_t *rio, int fd, char *filename, char *cgiargs, int bodyLength, double arrivalTime, char *method)
 {
-  const int BL = 1e5;
-  pid_t pid;
-  char* argv[1] = {NULL};
-  char* envp[MAXBUF];
-  char body_length[BL];
-  char rest_contents[MAXLINE];
-  char CONNFD[10];
+	pid_t pid;
+	char BodyLength[255];
+	char *argv[] = { NULL };
 
-  pid = Fork();
-  if (pid == 0) /* child process */
-  {
-    Rio_readrestb(rio, rest_contents);
-    printf("%s", rest_contents);
+	Setenv("REQUEST_METHOD", method, 1);
+	if (strcmp(method, "GET") == 0) 
+		Setenv("QUERY_STRING", cgiargs, 1);
+	
+	if (strcmp(method, "POST") == 0) {
+		sprintf(BodyLength, "%d", bodyLength);
+		Setenv("CONTENT_LENGTH", BodyLength, 1);
+	}
 
-    parseCgiargs(cgiargs, envp);
-
-    Setenv("REQUEST_METHOD", method, 1);
-    Setenv("REST_CONTENTS", rest_contents, 1);
-
-    sprintf(CONNFD, "%d", fd);
-    Setenv("CONNFD", CONNFD, 1);
-
-    Dup2(fd, STDOUT_FILENO);
-
-    if (strcmp(method, "GET") == 0) { // if method is GET
-      Setenv("QUERY_STRING", cgiargs, 1);
-    }
-    else {
-      sprintf(body_length, "%d", bodyLength);
-      Setenv("CONTENT_LENGTH", body_length, 1);
-
-      Dup2(fd, STDIN_FILENO);
-    }
-
-    Execve(filename, argv, environ);
-  }
-  else /* parent process */
-  {
-    wait(NULL);
-  }
+	pid = Fork();
+	if (pid == 0) {
+		Dup2(fd, STDOUT_FILENO);
+		if (strcmp(method, "POST") == 0) 
+			Dup2(fd, STDIN_FILENO);
+		
+		Execve(filename, argv, environ);
+	}
+	else 
+	{
+		wait(NULL);
+	}
 }
 
 
-void requestServeStatic(int fd, char *filename, int filesize, double arrivalTime)
+void requestServeStatic(int fd, char *filename, int filesize, double arrivalTime, char *method)
 {
   int srcfd;
   char *srcp, filetype[MAXLINE], buf[MAXBUF];
@@ -272,13 +257,13 @@ void requestHandle(int connfd, double arrivalTime)
       requestError(connfd, filename, "403", "Forbidden", "My Server could not read this file");
       return;
     }
-    requestServeStatic(connfd, filename, sbuf.st_size, arrivalTime);
+    requestServeStatic(connfd, filename, sbuf.st_size, arrivalTime, method);
   } else {
     if (!(S_ISREG(sbuf.st_mode)) || !(S_IXUSR & sbuf.st_mode)) {
       requestError(connfd, filename, "403", "Forbidden", "My Server could not run this CGI program");
       return;
     }
-    requestServeDynamic(&rio, connfd, filename, method, cgiargs, bodyLength, arrivalTime);
+    requestServeDynamic(&rio, connfd, filename, cgiargs, bodyLength, arrivalTime, method);
   }
 
 }

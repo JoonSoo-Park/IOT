@@ -9,28 +9,23 @@
 
 int main(void)
 {
-  char *ContentLength;
-  char *RestContents;
-  char content[MAXLINE + MAXLINE];
-  char extra[MAXLINE];
-  int length;
+	int bodyLength;
+	char *method;
+	char str[MAXLINE];
 
-  ContentLength = getenv("CONTENT_LENGTH");
-  RestContents = getenv("REST_CONTENTS");
-  length = atoi(ContentLength);
+	method = getenv("REQUEST_METHOD");
 
-  strcpy(content, RestContents);
-
-  if (length > strlen(content)) {
-    read(STDIN_FILENO, extra, sizeof(extra));
-    sprintf(content, "%s%s", content, extra);
-  }
-
-  printf("HTTP/1.0 200 OK\r\n");
-  printf("Server: My Web Server\r\n");
-  printf("Content-Length: %ld\r\n", strlen(content));
-  printf("Content-Type: text/plain\r\n\r\n");
-  printf("\n%s", content);
-  fflush(stdout);
-  return(0);
+	if (strcmp(method, "POST") == 0) {
+		bodyLength = atoi(getenv("CONTENT_LENGTH"));
+		if(bodyLength > 0) 
+			read(STDIN_FILENO, str, bodyLength + 1);
+	}
+  
+	printf("HTTP/1.0 200 OK\r\n");
+	printf("Server: My Web Server\r\n");
+	printf("Content-Length: %ld\r\n", strlen(str));
+	printf("Content-Type: text/plain\r\n\r\n");
+	printf("%s\n",str);
+	fflush(stdout);
+	return(0);
 }

@@ -326,7 +326,7 @@ static ssize_t rio_read(rio_t *rp, char *usrbuf, size_t n)
 
     while (rp->rio_cnt <= 0) {  /* refill if buf is empty */
         rp->rio_cnt = read(rp->rio_fd, rp->rio_buf, 
-                           sizeof(rp->rio_buf));
+                           sizeof(char));
         if (rp->rio_cnt < 0) {
             if (errno != EINTR) /* interrupted by sig handler return */
                 return -1;
