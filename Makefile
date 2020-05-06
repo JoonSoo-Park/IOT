@@ -2,17 +2,22 @@
 # To compile, type "make" or make "all"
 # To remove files, type "make clean"
 #
-OBJS = server.o request.o stems.o clientGet.o clientPost.o
+OBJS = test.o server.o request.o stems.o clientGet.o clientPost.o
 TARGET = server
 
 CC = gcc
 CFLAGS = -g -Wall
+CONFIGC = `mysql_config --cflags --libs`
 
 LIBS = -lpthread 
+MYSQLLIBS = -lmysqlclient
 
 .SUFFIXES: .c .o 
 
-all: server clientPost clientGet dataGet.cgi dataPost.cgi
+all: test server clientPost clientGet dataGet.cgi dataPost.cgi
+
+test: test.o
+	$(CC) $(CFLAGS) -o test test.o $(CONFIGC)
 
 server: server.o request.o stems.o
 	$(CC) $(CFLAGS) -o server server.o request.o stems.o $(LIBS)
@@ -27,7 +32,7 @@ dataGet.cgi: dataGet.c stems.h
 	$(CC) $(CFLAGS) -o dataGet.cgi dataGet.c stems.o
 
 dataPost.cgi: dataPost.c stems.h
-	$(CC) $(CFLAGS) -o dataPost.cgi dataPost.c stems.o
+	$(CC) $(CFLAGS) -o dataPost.cgi dataPost.c stems.o $(CONFIGC)
 
 .c.o:
 	$(CC) $(CFLAGS) -o $@ -c $<
