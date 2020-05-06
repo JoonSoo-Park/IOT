@@ -2,7 +2,7 @@
 # To compile, type "make" or make "all"
 # To remove files, type "make clean"
 #
-OBJS = test.o server.o request.o stems.o clientGet.o clientPost.o
+OBJS = mysql_example.o server.o request.o stems.o clientGet.o clientPost.o
 TARGET = server
 
 CC = gcc
@@ -14,10 +14,10 @@ MYSQLLIBS = -lmysqlclient
 
 .SUFFIXES: .c .o 
 
-all: test server clientPost clientGet dataGet.cgi dataPost.cgi
+all: mysql_example server clientPost clientGet dataGet.cgi dataPost.cgi
 
-test: test.o
-	$(CC) $(CFLAGS) -o test test.o $(CONFIGC)
+mysql_example: mysql_example.o
+	$(CC) $(CFLAGS) -o mysql_example mysql_example.o $(CONFIGC)
 
 server: server.o request.o stems.o
 	$(CC) $(CFLAGS) -o server server.o request.o stems.o $(LIBS)
@@ -42,4 +42,4 @@ clientGet.o: stems.h
 clientPost.o: stems.h
 
 clean:
-	-rm -f $(OBJS) server clientPost clientGet dataGet.cgi dataPost.cgi
+	-rm -f $(OBJS) mysql_example server clientPost clientGet dataGet.cgi dataPost.cgi

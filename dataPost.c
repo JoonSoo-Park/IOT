@@ -39,6 +39,12 @@ void parseCgiargs(char *cgiargs, char *ptr, size_t size)
 	strncpy(cgiargs, t, strlen(t) + 1);
 }
 
+void make_query(MYSQL *conn, const char *query)
+{
+	if (mysql_query(conn, query)) {
+		finish_with_error(conn);
+	}
+}
 
 /*
 1. check if sensorList exists
@@ -64,19 +70,14 @@ void QUERY(MYSQL *conn, char *sensorName, float time, float value)
 	"name VARCHAR(256) NOT NULL,"
 	"id INT AUTO_INCREMENT PRIMARY KEY,"
 	"cnt INT,"
-	"ave FLOAT"
+	"ave FLOAT(6, 2)"
 	");");
 
-	if (mysql_query(conn, query)) {
-		finish_with_error(conn);
-	}
+	make_query(conn, query);
 
 	// check if sensor exists in sensorList
 	sprintf(query, "SELECT COUNT(name) FROM sensorList WHERE name = \'%s\';", sensorName);
-
-	if (mysql_query(conn, query)) {
-		finish_with_error(conn);
-	}
+	make_query(conn, query);
 
 	result = mysql_store_result(conn);
 	if (result == NULL) {
@@ -87,9 +88,7 @@ void QUERY(MYSQL *conn, char *sensorName, float time, float value)
 	if (atoi(row[0]) != 0) { // if sensor already exists then just insert values.
 		// get sensor's id from sensorList
 		sprintf(query, "SELECT id FROM sensorList WHERE name = \'%s\';", sensorName);
-		if (mysql_query(conn, query)) {
-			finish_with_error(conn);
-		}
+		make_query(conn, query);
 
 		result = mysql_store_result(conn);
 		if (result == NULL) {
@@ -101,22 +100,15 @@ void QUERY(MYSQL *conn, char *sensorName, float time, float value)
 
 		sprintf(query, "INSERT INTO sensor%d(time, value)"
 			"VALUE(\'%d\', %f);", id, time_integer, value);
-		if (mysql_query(conn, query)) {
-			finish_with_error(conn);
-		}
+		make_query(conn, query);
 	}
 	else { // if this sensor is new to sensorList
 		sprintf(query, "INSERT INTO sensorList(name, cnt, ave)"
 		"VALUE('%s', 1, 0.0);", sensorName);
-
-		if (mysql_query(conn, query)) {
-			finish_with_error(conn);
-		}
+		make_query(conn, query);
 
 		sprintf(query, "SELECT id FROM sensorList ORDER BY id DESC LIMIT 1;");
-		if (mysql_query(conn, query)) {
-			finish_with_error(conn);
-		}
+		make_query(conn, query);
 
 		result = mysql_store_result(conn);
 		if (result == NULL) {
@@ -130,26 +122,19 @@ void QUERY(MYSQL *conn, char *sensorName, float time, float value)
 		sprintf(query, "CREATE TABLE IF NOT EXISTS sensor%d"
 			"("
 			"time INT,"
-			"value FLOAT,"
+			"value FLOAT(6, 2),"
 			"idx INT AUTO_INCREMENT PRIMARY KEY"
 			");", id);
-		
-		if (mysql_query(conn, query)) {
-			finish_with_error(conn);
-		}
+		make_query(conn, query);
 
 		sprintf(query, "INSERT INTO sensor%d(time, value)"
 			"VALUE(\'%d\', %f);", id, time_integer, value);
-		if (mysql_query(conn, query)) {
-			finish_with_error(conn);
-		}
+		make_query(conn, query);
 	}
 
 	// UPDATE cnt and ave
 	sprintf(query, "SELECT COUNT(*), AVG(value) FROM sensor%d;", id);
-	if (mysql_query(conn, query)) {
-		finish_with_error(conn);
-	}
+	make_query(conn, query);
 
 	result = mysql_store_result(conn);
 	if (result == NULL) {
@@ -162,9 +147,7 @@ void QUERY(MYSQL *conn, char *sensorName, float time, float value)
 
 	sprintf(query, "UPDATE sensorList SET cnt = %d, ave = %f WHERE name = \'%s\';", 
 		count, average,sensorName);
-	if (mysql_query(conn, query)) {
-		finish_with_error(conn);
-	}
+	make_query(conn, query);
 
 	mysql_free_result(result);
 }
