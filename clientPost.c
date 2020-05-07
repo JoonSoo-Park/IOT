@@ -121,7 +121,8 @@ CLI_ENUM get_command(const char* command)
 	char *token;
 	const char *delim = " \r\n=";
 
-	strcpy(buf, command);
+	strncpy(buf, command, strlen(command) + 1);
+	printf("%s\n", buf);
 
 	token = strtok(buf, delim);
 
@@ -193,7 +194,6 @@ void console(char *sensorName, char *hostname, int port, char *filename, float t
 	int quit = 0;
 
 	while (!quit) {
-		char *command = NULL;
 		char *option = NULL;
 
 		printf(">> ");
@@ -207,7 +207,7 @@ void console(char *sensorName, char *hostname, int port, char *filename, float t
 			continue;
 		}
 
-		command = strtok(input, delim);
+		strtok(input, delim);
 		option = strtok(NULL, delim);
 
 		switch(cli_number) {

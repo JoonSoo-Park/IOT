@@ -57,7 +57,7 @@ void make_query(MYSQL *conn, const char *query)
 */
 void QUERY(MYSQL *conn, char *sensorName, float time, float value)
 {
-	int num_fields, id, time_integer = (int)time;
+	int id, time_integer = (int)time;
 	int count;
 	float average;
 	char query[MAXLINE];

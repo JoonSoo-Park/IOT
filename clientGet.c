@@ -26,15 +26,15 @@
  */
 void clientSend(int fd, char *filename)
 {
-  char buf[MAXLINE];
-  char hostname[MAXLINE];
+	char buf[MAXLINE];
+	char hostname[MAXLINE];
 
-  Gethostname(hostname, MAXLINE);
+	Gethostname(hostname, MAXLINE);
 
-  /* Form and send the HTTP request */
-  sprintf(buf, "GET %s HTTP/1.1\n", filename);
-  sprintf(buf, "%shost: %s\n\r\n", buf, hostname);
-  Rio_writen(fd, buf, strlen(buf));
+	/* Form and send the HTTP request */
+	sprintf(buf, "GET %s HTTP/1.1\n", filename);
+	sprintf(buf, "%shost: %s\n\r\n", buf, hostname);
+	Rio_writen(fd, buf, strlen(buf));
 }
   
 /*
@@ -42,66 +42,208 @@ void clientSend(int fd, char *filename)
  */
 void clientPrint(int fd)
 {
-  rio_t rio;
-  char buf[MAXBUF];  
-  int length = 0;
-  int n;
+	rio_t rio;
+	char buf[MAXBUF];  
+	int length = 0;
+	int n;
   
-  Rio_readinitb(&rio, fd);
+	Rio_readinitb(&rio, fd);
 
-  /* Read and display the HTTP Header */
-  n = Rio_readlineb(&rio, buf, MAXBUF);
-  while (strcmp(buf, "\r\n") && (n > 0)) {
-    printf("Header: %s", buf);
-    n = Rio_readlineb(&rio, buf, MAXBUF);
+	/* Read and display the HTTP Header */
+	n = Rio_readlineb(&rio, buf, MAXBUF);
+	while (strcmp(buf, "\r\n") && (n > 0)) {
+	  printf("Header: %s", buf);
+	  n = Rio_readlineb(&rio, buf, MAXBUF);
 
-    /* If you want to look for certain HTTP tags... */
-    if (sscanf(buf, "Content-Length: %d ", &length) == 1) {
-      printf("Length = %d\n", length);
-    }
-  }
+	  /* If you want to look for certain HTTP tags... */
+	  if (sscanf(buf, "Content-Length: %d ", &length) == 1) {
+	    printf("Length = %d\n", length);
+	  }
+	}
 
-  /* Read and display the HTTP Body */
-  n = Rio_readlineb(&rio, buf, MAXBUF);
-  while (n > 0) {
-    printf("%s", buf);
-    n = Rio_readlineb(&rio, buf, MAXBUF);
-  }
+	/* Read and display the HTTP Body */
+	n = Rio_readlineb(&rio, buf, MAXBUF);
+	while (n > 0) {
+	  printf("%s", buf);
+	  n = Rio_readlineb(&rio, buf, MAXBUF);
+	}
+
+	printf("\n");
+}
+
+/*
+ * Read the HTTP response and print it out
+ */
+void clientPrintText(int fd)
+{
+	rio_t rio;
+	char buf[MAXBUF];  
+	int n;
+  
+	Rio_readinitb(&rio, fd);
+
+	/* Read and display the HTTP Body */
+	n = Rio_readlineb(&rio, buf, MAXBUF);
+	while (n > 0) {
+	  printf("%s", buf);
+	  n = Rio_readlineb(&rio, buf, MAXBUF);
+	}
+
+	printf("\n");
 }
 
 /* currently, there is no loop. I will add loop later */
 void userTask(char hostname[], int port, char webaddr[])
 {
-  int clientfd;
+	int clientfd;
 
-  clientfd = Open_clientfd(hostname, port);
-  clientSend(clientfd, webaddr);
-  clientPrint(clientfd);
-  Close(clientfd);
+	clientfd = Open_clientfd(hostname, port);
+	clientSend(clientfd, webaddr);
+	// clientPrint(clientfd);
+	clientPrintText(clientfd);
+	Close(clientfd);
 }
 
 void getargs_cg(char hostname[], int *port, char webaddr[])
 {
-  FILE *fp;
+	FILE *fp;
 
-  fp = fopen("config-cg2.txt", "r");
-  if (fp == NULL)
-    unix_error("config-cg.txt file does not open.");
+	fp = fopen("config-cg2.txt", "r");
+	if (fp == NULL)
+	  unix_error("config-cg.txt file does not open.");
 
-  fscanf(fp, "%s", hostname);
-  fscanf(fp, "%d", port);
-  fscanf(fp, "%s", webaddr);
-  fclose(fp);
+	fscanf(fp, "%s", hostname);
+	fscanf(fp, "%d", port);
+	fscanf(fp, "%s", webaddr);
+	fclose(fp);
+}
+
+// console programming
+typedef enum {
+	LIST = 0,
+	INFO,
+	GET,
+	QUIT,
+	EXIT,
+	CLI_ENUM_SIZE,
+	NOT_FOUND,
+	ERROR
+} CLI_ENUM;
+
+static const char *CLI_STRING[] = {
+	"LIST", 
+	"INFO",
+	"GET",
+	"QUIT",
+	"EXIT"
+};
+
+CLI_ENUM get_command(const char* command)
+{
+	char buf[MAXLINE];
+	char *token;
+	const char *delim = " \r\n";
+
+	strncpy(buf, command, strlen(command) + 1);
+
+	token = strtok(buf, delim);
+
+	for (int i = 0; i < strlen(token); ++i)
+		token[i] = toupper(token[i]);
+
+	if (token == NULL)
+		return ERROR;
+
+	for (int i = 0; i < CLI_ENUM_SIZE; ++i) {
+		if (!strcmp(CLI_STRING[i], token))
+			return i;
+	}
+
+	return NOT_FOUND;
+}
+
+void console(char hostname[], int port, char webaddr[])
+{
+	const char *delim = " \r\n";
+	char input[MAXLINE];
+	char ToSend[MAXLINE];
+	int cli_number;
+	int quit = 0;
+
+	while (!quit) {
+		char *option = NULL;
+		char *option2 = NULL;
+		int N = 1;
+
+		printf(">> ");
+		fgets(input, MAXLINE, stdin);
+		input[strlen(input) - 1] = '\0';
+
+		// copy without '\0'
+		memset(ToSend, 0, MAXLINE);
+		strncpy(ToSend, webaddr, strlen(webaddr));
+
+		cli_number = get_command(input);
+
+		if (cli_number == ERROR) {
+			puts("No input!!!\n");
+			continue;
+		}
+
+		if (cli_number == NOT_FOUND) {
+			puts("Unrecognized command.\n");
+			continue;
+		}
+
+		strtok(input, delim);
+		option = strtok(NULL, delim);
+		option2 = strtok(NULL, delim);
+
+		switch(cli_number) {
+			case LIST:
+				sprintf(ToSend, "%scommand=LIST", ToSend);
+				// cli_list(ToSend);
+				break;
+			case INFO:
+				if (option != NULL) {
+					sprintf(ToSend, "%scommand=INFO&value=%s", ToSend, option);
+				}
+				else {
+					printf("Usage : INFO <name>.\n");
+					continue;
+				}
+				break;
+			case GET:
+					if (option == NULL) {
+						printf("Usage : GET <name> <n>.\n");
+						continue;
+					}
+					if (option2 != NULL)
+						N = atoi(option2);
+					sprintf(ToSend, "%sNAME=%s&N=%d", ToSend, option, N);
+				break;
+			case QUIT: case EXIT:
+				quit = 1;
+				break;
+			default:
+				break;
+		}
+
+		if (quit) break;
+		userTask(hostname, port, ToSend);
+	}
 }
 
 int main(void)
 {
-  char hostname[MAXLINE], webaddr[MAXLINE];
-  int port;
+	char hostname[MAXLINE], webaddr[MAXLINE];
+	int port;
   
-  getargs_cg(hostname, &port, webaddr);
+	getargs_cg(hostname, &port, webaddr);
 
-  userTask(hostname, port, webaddr);
+	console(hostname, port, webaddr);
+
+	// userTask(hostname, port, webaddr);
   
-  return(0);
+	return(0);
 }

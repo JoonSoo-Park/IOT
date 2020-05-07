@@ -68,7 +68,7 @@ int main()
     int num_fields = mysql_num_fields(result);
 
     MYSQL_ROW row;
-    while (row = mysql_fetch_row(result))
+    while ((row = mysql_fetch_row(result)))
     {
         for (int i = 0; i < num_fields; ++i)
             printf("%s     ", row[i] ? row[i] : "NULL");
