@@ -237,9 +237,15 @@ void console(char hostname[], int port, char webaddr[])
 int main(void)
 {
 	char hostname[MAXLINE], webaddr[MAXLINE];
+	pid_t pid;
 	int port;
   
 	getargs_cg(hostname, &port, webaddr);
+
+	pid = Fork();
+	if (pid == 0) {
+		Execve("./alaram_server", NULL, NULL);
+	}
 
 	console(hostname, port, webaddr);
 

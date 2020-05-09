@@ -2,7 +2,7 @@
 # To compile, type "make" or make "all"
 # To remove files, type "make clean"
 #
-OBJS = mysql_example.o server.o request.o stems.o clientGet.o clientPost.o
+OBJS = mysql_example.o server.o request.o stems.o clientGet.o clientPost.o alarmClient.o alarmServer.o
 TARGET = server
 
 CC = gcc
@@ -14,7 +14,7 @@ MYSQLLIBS = -lmysqlclient
 
 .SUFFIXES: .c .o 
 
-all: mysql_example server clientPost clientGet dataGet.cgi dataPost.cgi
+all: mysql_example server clientPost clientGet dataGet.cgi dataPost.cgi alarmClient alarmServer
 
 mysql_example: mysql_example.o
 	$(CC) $(CFLAGS) -o mysql_example mysql_example.o $(CONFIGC)
@@ -34,6 +34,15 @@ dataGet.cgi: dataGet.c stems.h
 dataPost.cgi: dataPost.c stems.h
 	$(CC) $(CFLAGS) -o dataPost.cgi dataPost.c stems.o $(CONFIGC)
 
+alarmServer: alarmServer.o request.o stems.o
+	$(CC) $(CFLAGS) -o alarmServer alarmServer.o request.o stems.o $(LIBS)
+
+alarmClient: alarmClient.o stems.o
+	$(CC) $(CFLAGS) -o alarmClient alarmClient.o stems.o
+
+alarm.cgi: alarm.c stems.h
+	$(CC) $(CFLAGS) -o alarm.cgi alarm.c stems.o
+
 .c.o:
 	$(CC) $(CFLAGS) -o $@ -c $<
 
@@ -42,4 +51,4 @@ clientGet.o: stems.h
 clientPost.o: stems.h
 
 clean:
-	-rm -f $(OBJS) mysql_example server clientPost clientGet dataGet.cgi dataPost.cgi
+	-rm -f $(OBJS) mysql_example server clientPost clientGet dataGet.cgi dataPost.cgi alarm.cgi
