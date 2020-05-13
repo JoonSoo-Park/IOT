@@ -585,6 +585,20 @@ int Open_clientfd(char *hostname, int port)
     return rc;
 }
 
+int Open_clientfd_alarm(char *hostname, int port)
+{
+    int rc;
+    if ((rc = open_clientfd(hostname, port)) < 0) {
+        if (rc == -1) {
+            fprintf(stderr, "Open_clientfd Unix error\n");
+        }
+        else {
+            dns_error("Open_clientfd DNS error");
+        }
+    }
+    return rc;
+}
+
 int Open_listenfd(int port) 
 {
     int rc;

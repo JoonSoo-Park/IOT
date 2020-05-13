@@ -212,7 +212,7 @@ void POST(char *body, size_t size, float threshold)
 			fprintf(stderr, "NO FIFO SERVER\n");
 		}
 		else {
-			write(fifo_fd, body, size + 1);
+			write(fifo_fd, body, size);
 			close(fifo_fd);
 		}
 	}

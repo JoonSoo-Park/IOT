@@ -110,7 +110,6 @@ void textReturn(MYSQL *conn, char *args[])
 			option = strtok(NULL, "=");
 
 			sprintf(Query, "SELECT name, cnt, ave FROM sensorList WHERE name = \'%s\';", option);
-			printf("%s\n", Query);
 
 			make_query(conn, Query);
 
@@ -163,8 +162,6 @@ void textReturn(MYSQL *conn, char *args[])
 	}
 
 	/* Generate the HTTP response */
-	printf("Content-Length: %ld\n", strlen(content));
-	printf("Content-Type: text/plain\r\n\r\n");
 	printf("%s", content);
 	fflush(stdout);
 

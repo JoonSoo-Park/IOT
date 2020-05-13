@@ -40,7 +40,7 @@ int main(void)
   // launch alarm client process
   pid = Fork();
   if (pid == 0) {
-    Execve("./alarmClient", NULL, NULL);
+    Execve("alarmClient", NULL, NULL);
   }
 
   listenfd = Open_listenfd(port);
