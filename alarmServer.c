@@ -14,7 +14,7 @@ void getargs_ws(int *port)
 {
   FILE *fp;
 
-  if ((fp = fopen("config-ws.txt", "r")) == NULL)
+  if ((fp = fopen("config-as.txt", "r")) == NULL)
     unix_error("config-ws.txt file does not open.");
 
   fscanf(fp, "%d", port);
@@ -30,18 +30,11 @@ void consumer(int connfd, long arrivalTime)
 
 int main(void)
 {
-  pid_t pid;
   int listenfd, connfd, port, clientlen;
   struct sockaddr_in clientaddr;
 
   initWatch();
   getargs_ws(&port);
-
-  // launch alarm client process
-  pid = Fork();
-  if (pid == 0) {
-    Execve("alarmClient", NULL, NULL);
-  }
 
   listenfd = Open_listenfd(port);
   while (1) {

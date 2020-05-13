@@ -5,6 +5,8 @@
 #include <string.h>
 #include <mysql/mysql.h>
 
+#define FIFO_NAME "./alarm_fifo"
+
 void finish_with_error(MYSQL *conn) 
 {
     fprintf(stderr, "%s\n", mysql_error(conn));
@@ -152,7 +154,7 @@ void QUERY(MYSQL *conn, char *sensorName, float time, float value)
 	mysql_free_result(result);
 }
 
-void POST(char *body, size_t size)
+void POST(char *body, size_t size, float threshold)
 {
 	MYSQL *conn;
 
@@ -201,16 +203,44 @@ void POST(char *body, size_t size)
 	time = atof(args[1]);
 	value = atof(args[2]);
 
+	// if value > threshold, then call alarmClient
+	if (value > threshold) {
+		int fifo_fd;
+
+		fifo_fd = open(FIFO_NAME, O_WRONLY);
+		if (fifo_fd == -1) {
+			fprintf(stderr, "NO FIFO SERVER\n");
+		}
+		else {
+			write(fifo_fd, body, size);
+			close(fifo_fd);
+		}
+	}
+
 	QUERY(conn, args[0], time, value);
 
 	mysql_close(conn);
 }
 
+void getargc_ac(float *threshold)
+{
+	FILE *fp;
+
+	fp = fopen("threshold.txt", "r");
+	if (fp == NULL) 
+		unix_error("threshold.txt file does not open.");
+
+	fscanf(fp, "%f", threshold);
+}
+
 int main(void)
 {
 	int bodyLength;
+	float threshold;
 	char body[MAXLINE];
 	char *method;
+
+	getargc_ac(&threshold);
 
 	method = getenv("REQUEST_METHOD");
 
@@ -226,7 +256,7 @@ int main(void)
 	printf("Content-Type: text/plain\r\n\r\n");
 	printf("%s\n",body);
 
-	POST(body, strlen(body));
+	POST(body, strlen(body), threshold);
 
 	fflush(stdout);
 	return(0);

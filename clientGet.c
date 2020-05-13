@@ -19,6 +19,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <semaphore.h>
+#include <mysql/mysql.h>
 #include "stems.h"
 
 /*
@@ -120,9 +121,11 @@ void getargs_cg(char hostname[], int *port, char webaddr[])
 
 // console programming
 typedef enum {
-	LIST = 0,
+	HELP = 0,
+	CLI_LIST,
 	INFO,
 	GET,
+	WARNINGS,
 	QUIT,
 	EXIT,
 	CLI_ENUM_SIZE,
@@ -131,9 +134,11 @@ typedef enum {
 } CLI_ENUM;
 
 static const char *CLI_STRING[] = {
+	"HELP",
 	"LIST", 
 	"INFO",
 	"GET",
+	"WARNINGS",
 	"QUIT",
 	"EXIT"
 };
@@ -162,6 +167,97 @@ CLI_ENUM get_command(const char* command)
 	return NOT_FOUND;
 }
 
+void help()
+{
+	printf("help: list available commands.\n");
+	printf("list: list all sensor name.\n");
+	printf("info <sensor>: print <sensor> name, count and average.\n");
+	printf("get <sensor> <n>: print <sensor>'s last <n> time and value.\n");
+	printf("warnings: print all warnings in DB.\n");
+	printf("quit: quit the program.\n");
+	printf("exit: exit the program.\n");
+}
+
+void getargs_database(char host[], char user[], char password[], char db[])
+{
+	FILE *fp;
+
+	fp = fopen("mysql-iotserver.txt", "r");
+	if (fp == NULL)
+	  unix_error("mysql-iotserver.txt file does not open in clientGet.c.\n");
+
+	fscanf(fp, "%s", host);
+	fscanf(fp, "%s", user);
+	fscanf(fp, "%s", password);
+	fscanf(fp, "%s", db);
+	fclose(fp);
+}
+
+void finish_with_error(MYSQL *conn) 
+{
+    fprintf(stderr, "%s\n", mysql_error(conn));
+    mysql_close(conn);
+    exit(1);
+}
+
+void make_query(MYSQL *conn, const char *query)
+{
+	if (mysql_query(conn, query)) {
+		finish_with_error(conn);
+	}
+}
+
+void warnings()
+{
+	// connect DB
+	// print all warnings
+	// delete all warnings
+
+	char host[256];
+	char user[256];
+	char password[256];
+	char db[256];
+	char query[MAXLINE];
+
+	MYSQL *conn;
+	MYSQL_ROW row;
+
+	conn = mysql_init(NULL);
+	if (conn == NULL) {
+		fprintf(stderr, "%s\n", mysql_error(conn));
+		exit(1);
+	}
+
+	getargs_database(host, user, password, db);
+
+    if (mysql_real_connect(conn, host, user, password, db, 0, NULL, 0) == NULL) {
+        fprintf(stderr, "%s\n", mysql_error(conn));
+        mysql_close(conn);
+        exit(1);
+    }
+
+	// print from newest data.
+	sprintf(query, "SELECT * FROM warnings ORDER BY time DESC;");
+	make_query(conn, query);
+
+	MYSQL_RES *result;
+	result = mysql_store_result(conn);
+	if (result == NULL) {
+		finish_with_error(conn);
+	}
+
+	int num_fields = mysql_num_fields(result);
+	while ((row = mysql_fetch_row(result))) {
+		for (int i =0; i < num_fields; ++i) {
+			printf("%s\t", row[i] ? row[i] : "NULL");
+		}
+		printf("\n");
+	}
+
+	mysql_free_result(result);
+	mysql_close(conn);
+}
+
 void console(char hostname[], int port, char webaddr[])
 {
 	const char *delim = " \r\n";
@@ -178,6 +274,8 @@ void console(char hostname[], int port, char webaddr[])
 		printf(">> ");
 		fgets(input, MAXLINE, stdin);
 		input[strlen(input) - 1] = '\0';
+
+		if (strlen(input) == 0) continue;
 
 		// copy without '\0'
 		memset(ToSend, 0, MAXLINE);
@@ -200,7 +298,11 @@ void console(char hostname[], int port, char webaddr[])
 		option2 = strtok(NULL, delim);
 
 		switch(cli_number) {
-			case LIST:
+			case HELP:
+				help();
+				continue;
+				break;
+			case CLI_LIST:
 				sprintf(ToSend, "%scommand=LIST", ToSend);
 				// cli_list(ToSend);
 				break;
@@ -222,6 +324,10 @@ void console(char hostname[], int port, char webaddr[])
 						N = atoi(option2);
 					sprintf(ToSend, "%sNAME=%s&N=%d", ToSend, option, N);
 				break;
+			case WARNINGS:
+				// read from database
+				warnings();
+				break;
 			case QUIT: case EXIT:
 				quit = 1;
 				break;
@@ -237,11 +343,20 @@ void console(char hostname[], int port, char webaddr[])
 int main(void)
 {
 	char hostname[MAXLINE], webaddr[MAXLINE];
+	pid_t pid;
 	int port;
   
 	getargs_cg(hostname, &port, webaddr);
 
+	pid = Fork();
+	if (pid == 0) {
+		Execve("alarmServer", NULL, NULL);
+	}
+
 	console(hostname, port, webaddr);
+
+	// kill alarmserver
+	kill(pid, SIGINT);
 
 	// userTask(hostname, port, webaddr);
   
