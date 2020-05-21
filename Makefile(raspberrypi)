@@ -1,0 +1,28 @@
+#
+# To compile, type "make" or make "all"
+# To remove files, type "make clean"
+#
+OBJS = stems.o clientPostPi.o
+TARGET = server
+
+CC = gcc
+CFLAGS = -g -Wall
+CONFIGC = -lwiringPi
+
+LIBS = -lpthread 
+MYSQLLIBS = -lmysqlclient
+
+.SUFFIXES: .c .o 
+
+all: clientPostPi
+
+clientPostPi: clientPostPi.o stems.o
+	$(CC) $(CFLAGS) -o clientPostPi clientPostPi.o stems.o $(LIBS) $(CONFIGC)
+
+.c.o:
+	$(CC) $(CFLAGS) -o $@ -c $<
+
+clientPostPi.o: stems.h
+
+clean:
+	-rm -f $(OBJS) clientPostPi
