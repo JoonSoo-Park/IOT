@@ -2,7 +2,7 @@
 # To compile, type "make" or make "all"
 # To remove files, type "make clean"
 #
-OBJS = mysql_example.o server.o request.o stems.o clientGet.o clientPost.o alarmClient.o alarmServer.o
+OBJS = mysql_example.o server.o request.o stems.o clientGet.o clientPost.o alarmClient.o alarmServer.o alarm.o
 TARGET = server
 
 CC = gcc
@@ -51,4 +51,4 @@ clientGet.o: stems.h
 clientPost.o: stems.h
 
 clean:
-	-rm -f $(OBJS) mysql_example server clientPost clientGet dataGet.cgi dataPost.cgi alarm.cgi alarmClient alarmServer
+	-rm -f $(OBJS) mysql_example server clientPost clientGet dataGet.cgi dataPost.cgi alarm.cgi alarmClient alarmServer alarm_fifo
